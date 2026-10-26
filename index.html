@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Selamat Ulang Tahun!</title>
+  <style>
+    body {
+      margin: 0; min-height: 100vh; display: flex;
+      align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      font-family: Arial, sans-serif; text-align: center; overflow: hidden;
+    }
+    .card {
+      background: white; padding: 40px 30px; border-radius: 20px;
+      max-width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,.2);
+    }
+    h1 { color: #e91e63; margin: 0 0 10px; }
+    #pesan { display: none; margin-top: 20px; line-height: 1.6; }
+    button {
+      background: #e91e63; color: white; border: 0; padding: 12px 24px;
+      border-radius: 30px; font-size: 16px; cursor: pointer;
+    }
+    .jatuh { position: fixed; top: -40px; font-size: 28px; animation: jatuh 4s linear forwards; }
+    @keyframes jatuh { to { transform: translateY(110vh) rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🎂 Hai, <span id="nama">Teman</span>!</h1>
+    <p>Ada kejutan buat kamu...</p>
+    <button onclick="buka()">Buka Kejutan 🎁</button>
+    <p id="pesan">
+      Selamat ulang tahun! Semoga panjang umur, sehat selalu,
+      dan semua impianmu tercapai. Terima kasih sudah jadi teman yang luar biasa! 🎉
+    </p>
+  </div>
+
+  <script>
+    // Ambil nama dari link, contoh: ?nama=Budi
+    const nama = new URLSearchParams(location.search).get("nama");
+    if (nama) document.getElementById("nama").textContent = nama;
+
+    function buka() {
+      document.getElementById("pesan").style.display = "block";
+      const emoji = ["🎉", "🎈", "🎂", "✨", "🎁"];
+      for (let i = 0; i < 40; i++) {
+        const el = document.createElement("div");
+        el.className = "jatuh";
+        el.textContent = emoji[Math.floor(Math.random() * emoji.length)];
+        el.style.left = Math.random() * 100 + "vw";
+        el.style.animationDelay = Math.random() * 2 + "s";
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 7000);
+      }
+    }
+  </script>
+</body>
+</html>
