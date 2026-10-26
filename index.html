@@ -1,59 +1,180 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Selamat Ulang Tahun!</title>
-  <style>
-    body {
-      margin: 0; min-height: 100vh; display: flex;
-      align-items: center; justify-content: center;
-      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
-      font-family: Arial, sans-serif; text-align: center; overflow: hidden;
-    }
-    .card {
-      background: white; padding: 40px 30px; border-radius: 20px;
-      max-width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,.2);
-    }
-    h1 { color: #e91e63; margin: 0 0 10px; }
-    #pesan { display: none; margin-top: 20px; line-height: 1.6; }
-    button {
-      background: #e91e63; color: white; border: 0; padding: 12px 24px;
-      border-radius: 30px; font-size: 16px; cursor: pointer;
-    }
-    .jatuh { position: fixed; top: -40px; font-size: 28px; animation: jatuh 4s linear forwards; }
-    @keyframes jatuh { to { transform: translateY(110vh) rotate(360deg); } }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Happy Birthday</title>
+<style>
+:root{--bg:#000;--pink:#ff4d8d;box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#again{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font:14px ui-monospace,Menlo,Consolas,monospace;color:#ffd6e7;background:rgba(0,0,0,.55);border:1px solid var(--pink);border-radius:999px;padding:10px 22px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .8s}
+#again.show{opacity:1;pointer-events:auto}
+#again:focus-visible{outline:2px solid #fff;outline-offset:3px}
+#start{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);font:700 18px ui-monospace,Menlo,Consolas,monospace;color:#fff;background:rgba(0,0,0,.6);border:2px solid var(--pink);border-radius:999px;padding:16px 34px;cursor:pointer;box-shadow:0 0 40px rgba(255,77,141,.45)}
+#start small{display:block;font-weight:400;font-size:12px;color:#ffd6e7;margin-top:4px}
+#start:focus-visible,#mute:focus-visible{outline:2px solid #fff;outline-offset:3px}
+#mute{position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top,0px));font-size:18px;line-height:1;color:#fff;background:rgba(0,0,0,.5);border:1px solid var(--pink);border-radius:50%;width:40px;height:40px;cursor:pointer;display:none}
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>🎂 Hai, <span id="nama">Teman</span>!</h1>
-    <p>Ada kejutan buat kamu...</p>
-    <button onclick="buka()">Buka Kejutan 🎁</button>
-    <p id="pesan">
-      Selamat ulang tahun! Semoga panjang umur, sehat selalu,
-      dan semua impianmu tercapai. Terima kasih sudah jadi teman yang luar biasa! 🎉
-    </p>
-  </div>
+<canvas id="rain"></canvas>
+<canvas id="fx" role="img" aria-label="Animasi ucapan selamat ulang tahun"></canvas>
+<button id="again">↻ putar lagi</button>
+<button id="mute" aria-label="Matikan suara">🔊</button>
+<button id="start">▶ Mulai<small>nyalakan suara 🔊</small></button>
+<script>
+(function(){
+  var rain=document.getElementById('rain'),fx=document.getElementById('fx'),again=document.getElementById('again');
+  var rc=rain.getContext('2d'),fc=fx.getContext('2d');
+  var W,H,dpr,cols,drops,FS=14,P=[],cx,cy,mode='idle',sw=0,swFrom=0,run=0,last=0;
+  var cur={gap:4,color:'#fff',txt:'',pts:[]};
+  var CH='HAPPYBIRTHDAYSELAMATULANGTAHUN0123456789';
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
 
-  <script>
-    // Ambil nama dari link, contoh: ?nama=Budi
-    const nama = new URLSearchParams(location.search).get("nama");
-    if (nama) document.getElementById("nama").textContent = nama;
-
-    function buka() {
-      document.getElementById("pesan").style.display = "block";
-      const emoji = ["🎉", "🎈", "🎂", "✨", "🎁"];
-      for (let i = 0; i < 40; i++) {
-        const el = document.createElement("div");
-        el.className = "jatuh";
-        el.textContent = emoji[Math.floor(Math.random() * emoji.length)];
-        el.style.left = Math.random() * 100 + "vw";
-        el.style.animationDelay = Math.random() * 2 + "s";
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 7000);
-      }
+  function size(){
+    dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cx=W/2;cy=H/2;
+    [rain,fx].forEach(function(c){c.width=W*dpr;c.height=H*dpr});
+    rc.setTransform(dpr,0,0,dpr,0,0);fc.setTransform(dpr,0,0,dpr,0,0);
+    cols=Math.ceil(W/FS);drops=[];
+    for(var i=0;i<cols;i++)drops.push(Math.random()*H/FS);
+  }
+  function rainStep(){
+    rc.fillStyle='rgba(0,0,0,.13)';rc.fillRect(0,0,W,H);rc.font=FS+'px monospace';
+    for(var i=0;i<cols;i++){
+      var x=i*FS,y=drops[i]*FS;
+      rc.globalAlpha=.75;rc.fillStyle='#ff4d8d';rc.fillText(CH[Math.random()*CH.length|0],x,y-FS);
+      rc.globalAlpha=1;rc.fillStyle='#ffe3ee';rc.fillText(CH[Math.random()*CH.length|0],x,y);
+      if(y>H&&Math.random()>.975)drops[i]=0;
+      drops[i]++;
     }
-  </script>
+  }
+  // ubah teks jadi titik-titik
+  function sample(txt){
+    var o=document.createElement('canvas');o.width=W;o.height=H;
+    var c=o.getContext('2d'),lines=txt.split('|'),fs=Math.min(H*.42,W*.55);
+    while(fs>12){
+      c.font='bold '+fs+'px Arial,Helvetica,sans-serif';
+      var mx=Math.max.apply(null,lines.map(function(l){return c.measureText(l).width}));
+      if(mx<=W*.84&&lines.length*fs*1.18<=H*.72)break;
+      fs-=3;
+    }
+    c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+    lines.forEach(function(l,i){c.fillText(l,W/2,H/2+(i-(lines.length-1)/2)*fs*1.18)});
+    var d=c.getImageData(0,0,W,H).data,gap=Math.max(3,Math.round(fs/24)),pts;
+    do{
+      pts=[];
+      for(var y=0;y<H;y+=gap)for(var x=0;x<W;x+=gap)if(d[(y*W+x)*4+3]>128)pts.push([x,y]);
+      gap++;
+    }while(pts.length>2600);
+    for(var i=pts.length-1;i>0;i--){var j=Math.random()*(i+1)|0,t=pts[i];pts[i]=pts[j];pts[j]=t}
+    return {pts:pts,gap:gap-1};
+  }
+  function assign(txt,color){
+    var r=sample(txt);cur.txt=txt;cur.color=color;cur.gap=r.gap;
+    while(P.length<r.pts.length)P.push({x:cx,y:cy,vx:0,vy:0,al:0,ta:0,tx:cx,ty:cy,k:.03+Math.random()*.05,a:0,r:0,s:0,r0:0});
+    P.forEach(function(p,i){
+      var q=r.pts[i];
+      if(q){p.tx=q[0];p.ty=q[1];p.ta=1}else p.ta=0;
+      p.vx=(Math.random()-.5)*16;p.vy=(Math.random()-.5)*16;
+    });
+  }
+  function startSwirl(){
+    P.forEach(function(p){
+      var dx=p.x-cx,dy=p.y-cy;p.a=Math.atan2(dy,dx);p.r0=Math.hypot(dx,dy);p.s=.1+Math.random()*.1;
+    });
+    sw=0;mode='swirl';
+  }
+  function frame(t){
+    if(t-last>55){rainStep();last=t}
+    fc.clearRect(0,0,W,H);
+    var s=cur.gap*.78;fc.fillStyle=cur.color;
+    if(mode==='swirl')sw=Math.min(1,sw+16/(reduce?1:850));
+    for(var i=0;i<P.length;i++){
+      var p=P[i];
+      if(mode==='swirl'){
+        p.a+=p.s*(1+sw*2.2);
+        var rr=p.r0*(1-sw*.93);
+        p.x=cx+Math.cos(p.a)*rr;p.y=cy+Math.sin(p.a)*rr*.9;
+        p.ta=sw>.15?1:p.ta;
+      }else if(mode==='form'){
+        p.vx=(p.vx+(p.tx-p.x)*p.k)*.8;p.vy=(p.vy+(p.ty-p.y)*p.k)*.8;
+        p.x+=p.vx;p.y+=p.vy;
+      }
+      p.al+=(p.ta-p.al)*.15;
+      if(p.al>.03){fc.globalAlpha=p.al;fc.fillRect(p.x-s/2,p.y-s/2,s,s)}
+    }
+    fc.globalAlpha=1;
+    requestAnimationFrame(frame);
+  }
+  // lagu: Happy Birthday (domain publik), disintesis dengan Web Audio
+  var ac=null,master=null,muted=false,BEAT=.5;
+  var TUNE=[[392,.75],[392,.25],[440,1],[392,1],[523.25,1],[493.88,2],
+            [392,.75],[392,.25],[440,1],[392,1],[587.33,1],[523.25,2],
+            [392,.75],[392,.25],[783.99,1],[659.25,1],[523.25,1],[493.88,1],[440,1],
+            [698.46,.75],[698.46,.25],[659.25,1],[523.25,1],[587.33,1],[523.25,2.5]];
+  function initAudio(){
+    if(ac)return;var A=window.AudioContext||window.webkitAudioContext;if(!A)return;
+    ac=new A();master=ac.createGain();master.gain.value=.7;master.connect(ac.destination);
+    if(ac.resume)ac.resume();
+  }
+  function tone(f,t,d,type,v){
+    var o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g);g.connect(master);o.start(t);o.stop(t+d+.05);
+  }
+  function song(){
+    if(!ac)return;var t=ac.currentTime+.05;
+    [1,.7].forEach(function(vol,pass){
+      TUNE.forEach(function(n,i){
+        var last=pass===1&&i===TUNE.length-1,d=last?3.4:Math.max(.5,n[1]*BEAT*1.5);
+        tone(n[0],t,d,'triangle',.28*vol);tone(n[0]*2,t,d*.6,'sine',.08*vol);
+        if(last)tone(n[0]/2,t,d,'sine',.12);
+        t+=n[1]*BEAT;
+      });
+    });
+  }
+  function beep(i){if(ac)tone(i===2?1046:784,ac.currentTime,.25,'sine',.22)}
+  function chime(){if(!ac)return;var t=ac.currentTime;[1046.5,1318.5,1568].forEach(function(f,k){tone(f,t+k*.16,1.6,'sine',.18)})}
+
+  var SCENES=[
+    ['3','#ffffff',1000,'b'],['2','#ffffff',1000,'b'],['1','#ffffff',1100,'b'],
+    ['HAPPY|BIRTHDAY|TO YOU','#ffffff',1450,'s'],
+    ['HAPPY|BIRTHDAY|TO YOU','#ffffff',1450],
+    ['HAPPY|BIRTHDAY|ALFI MASYKUROH','#ffd6e7',1450],
+    ['HAPPY|BIRTHDAY|TO YOU','#ffffff',1450],
+    ['SELAMAT|ULANG TAHUN','#ffd6e7',2400],
+    ['SEMOGA|SEHAT &|BAHAGIA SELALU','#ffffff',2400],
+    ['FROM|AUNIDA|FARADILA|BAISYURA|COMELLL','#ff7aa8',2600],
+    ['♥','#ff4d8d',0,'c']
+  ];
+  async function play(){
+    var id=++run;again.classList.remove('show');
+    if(!P.length)await sleep(500);
+    for(var i=0;i<SCENES.length;i++){
+      if(id!==run)return;
+      var sc=SCENES[i];
+      if(P.length){startSwirl();await sleep(reduce?50:850)}
+      if(id!==run)return;
+      assign(sc[0],sc[1]);mode='form';
+      if(sc[3]==='b')beep(i);if(sc[3]==='s')song();if(sc[3]==='c')chime();
+      if(i===SCENES.length-1)break;
+      await sleep(sc[2]+700);
+    }
+    await sleep(3200);again.classList.add('show');
+  }
+  size();
+  addEventListener('resize',function(){size();if(cur.txt&&mode==='form')assign(cur.txt,cur.color)});
+  again.addEventListener('click',play);
+  requestAnimationFrame(frame);
+  var st=document.getElementById('start'),mu=document.getElementById('mute');
+  st.addEventListener('click',function(){initAudio();st.remove();mu.style.display='block';play()});
+  mu.addEventListener('click',function(){
+    muted=!muted;if(master)master.gain.value=muted?0:.7;
+    mu.textContent=muted?'🔇':'🔊';mu.setAttribute('aria-label',muted?'Nyalakan suara':'Matikan suara');
+  });
+})();
+</script>
 </body>
 </html>
